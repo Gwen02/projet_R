@@ -1,4 +1,8 @@
+#install.packages("tidyverse")
+#install.packages("fmsb")
 library(tidyverse)
+library(ggradar)
+
 
 # Variables Width / Height pour les plots (en pouces)
 w = 10
@@ -54,23 +58,63 @@ ggsave(plot2, file="plots/prix_par_quartier_type.pdf", width = w, height = h)
 #################################### PLOT 3 ####################################
 # Quartiers les plus disponibles (top 6) par arrondissements
 
-# On prend seulement les appartements de Manhattan
-appt_manhattan <- df[df$neighbourhood_group == 'Manhattan',] 
+# On récupère les catégories
+categories <- unique(df$neighbourhood_group)
+colors <- c("#cb7329", "#728ea4", "#9da339", "#a9718a", "#e2b420")
+# iterateur sur les couleurs
+i <- 1
+# Pour chaque arrondissement, on fait un plot
+for(cat in categories){
+  if(i == 0){
+    i <- 1
+  }
+  # On prend seulement les appartements de l'arrondissement
+  appt_arr <- df[df$neighbourhood_group == cat,] 
+  
+  # On compte le nombre d'appt par quartier
+  appt_par_quartier_arr <- 
+    appt_arr %>%
+    group_by(neighbourhood) %>%
+    count(neighbourhood)
+  
+  # On garde les 6 plus peuplés
+  top6_arr = head(appt_par_quartier_arr[order(appt_par_quartier_arr$n, decreasing =  T),], 6)
+  appt_top6 <- appt_arr[appt_arr$neighbourhood %in% top6_arr$neighbourhood,]
+  
+  # Disponibilité moyenne des 6 premiers quartiers de l'arrondissement
+  moyenne_dispo_quartier <- 
+    appt_top6 %>%
+    group_by(neighbourhood) %>%
+    summarise(dispo_moyenne = round(mean(availability_365) / 3.65))
+  
+  # On transpose le df pour avoir les noms de quartier en nom de colonnes,  puis une ligne des valeurs de dispo moyennes
+  neigh_names = moyenne_dispo_quartier$neighbourhood
+  moyenne_dispo_quartier_transpose = as.data.frame(t(moyenne_dispo_quartier[, -1]))
+  colnames(moyenne_dispo_quartier_transpose) <- neigh_names
+  # On ajoute le min / max pour chaque valeur pour pouvoir utiliser le radarchart
+  moyenne_dispo_quartier_transpose <- rbind(rep(100,1) , rep(0,6) , moyenne_dispo_quartier_transpose)
+  
+  # Création du radar chart
+  name = paste("plots/radar_dispo_moyenne/radar_disp_moyenne_", cat, ".pdf", sep="")
+  pdf(name, width = 1.4*w, height = 1.4*h)
+  radarchart(moyenne_dispo_quartier_transpose,
+             axistype = 1,
+             pcol=paste(colors[i], "AF", sep=""),
+             pfcol=paste(colors[i], "AF", sep=""),
+             plwd=3,
+             axislabcol="#878787",
+             cglwd=1,
+             vlcex=2.5,
+             calcex = 2.8,
+             title=paste("Disponibilitées à ", cat, "", " (% de l'année)", sep=""),
+             cex.main = 3
+             )
+  dev.off()
+  i <- (i + 1)%%6
+}
 
-# On compte le nombre d'appt par quartier
-appt_par_quartier_man <- 
-  appt_manhattan %>%
-  group_by(neighbourhood) %>%
-  count(neighbourhood)
+###########################################################################################
 
-# On garde les 6 plus peuplés
-top6Manhattan = head(appt_par_quartier_man[order(appt_par_quartier_man$n, decreasing =  T),], 6)
-appt_top6 <- appt_manhattan[appt_manhattan$neighbourhood %in% top6Manhattan$neighbourhood,]
 
-# Disponibilité moyenne des 6 premiers quartiers de Manhattan
-moyenne_dispo_quartier <- 
-  appt_top6 %>%
-  group_by(neighbourhood) %>%
-  summarise(dispo_moyenne = mean(availability_365) / 3.65)
 
 
