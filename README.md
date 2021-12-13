@@ -3,7 +3,7 @@
 ## Étudiants
 Gwenaël Ebersohl (ebersohl@insa-toulouse.fr)\
 Pierre Ung (ung@insa-toulouse.fr)\
-Groupe A2\
+Groupe A2
 
 ## Le projet
 Dans le cadre de la dernière année de formation d'ingénieur INSA Toulouse (parcours SDBD), nous avons effectué un projet d'exploraion de données massives.
