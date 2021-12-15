@@ -1,8 +1,11 @@
 #install.packages("tidyverse")
 #install.packages("fmsb")
+#install.packages("leaflet")
+#install.packages("maps")
 library(tidyverse)
-library(ggradar)
-
+library(fmsb)
+library(leaflet)
+library(maps)
 
 # Variables Width / Height pour les plots (en pouces)
 w = 10
@@ -113,7 +116,68 @@ for(cat in categories){
   i <- (i + 1)%%6
 }
 
-###########################################################################################
+#################################### PLOT 4 ####################################
+# Carte des 20 AirBNB les moins chères (avec prix) dans le quartier de Midtown (Empire State Building), où le nombre minimum de nuits est 
+# <= 2, avec une diusponibilité d'au moin 30 jours dans l'année, et un prix d'au maximum 100$ / nuit
+
+# On selectionne les airbnb de midtown, puis les 20 moins chères
+midtown_Top20 <-
+  df %>%
+  filter(neighbourhood == "Midtown") %>%
+  filter(minimum_nights <= 2) %>%
+  filter(price <= 100) %>%
+  filter(availability_365 >= 30) %>%
+  arrange(price) %>%
+  head(20)
+
+# Ajout image du Pin
+custom_pin = makeIcon(
+  iconUrl = "icon/custom_pin.png",
+  iconWidth = 30, iconHeight = 30,
+  iconAnchorX = 0, iconAnchorY = 0
+)
+
+# Creation de la carte
+map <- leaflet() %>% setView(lng = -73.985428, lat = 40.748817, zoom = 15.45)
+
+
+map <- map %>%
+  # Ajout d'un marker Empire State Building
+  addMarkers(lng = -73.985428, lat = 40.748817,
+                     label = "Empire State Building",
+                     icon = custom_pin,
+                     labelOptions = labelOptions(noHide = T,
+                                                 style = list(
+                                                   "color" = "red",
+                                                   "font-size" = "15px"
+                                                 )),
+  ) %>%
+  # Ajout d'un marker Rockfeller Center
+  addMarkers(lng = -73.978798, lat = 40.758678,
+             label = "Rockefeller Center",
+             icon = custom_pin,
+             labelOptions = labelOptions(noHide = T,
+                                         style = list(
+                                           "color" = "red",
+                                           "font-size" = "15px"
+                                         )),
+  ) %>%
+  # Ajout des markers (Latitude / longitude des logements)
+  addMarkers(lng = midtown_Top20$longitude, lat =  midtown_Top20$latitude,
+             label = paste(midtown_Top20$price, "$"),
+             icon = custom_pin,
+             labelOptions = labelOptions(noHide = T,
+                                         style = list(
+                                           "color" = "green",
+                                           "font-size" = "12px"
+                                         )),
+             )
+
+map %>% addTiles()
+
+# Pour sauvegarder la carte, on prend un screenshot (car c'est une view et non un plot, donc pas de sauvegarde en pdf possible nativement)
+
+
 
 
 
