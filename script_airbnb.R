@@ -36,7 +36,7 @@ plot1 <- appt_par_arrond %>%
   ggplot(aes(x = reorder(Arrondissements, `Nombre d'appartements`), y=`Nombre d'appartements`, fill=Arrondissements)) + 
   geom_bar(stat="identity") + 
   scale_fill_manual(values = arrond_colors) +
-  ggtitle("Nombre de AirBnb par arrondissement") +
+  ggtitle("Fig1: Nombre de AirBnb par arrondissement") +
   labs(x="Arrondissements") +
   theme(text = element_text(size = 20))
 
@@ -55,11 +55,12 @@ plot2 <- prix_par_arrond_type %>%
   ggplot(aes(x = Arrondissements, y = `Prix moyen`, fill = `Type de logement`, label = `Prix moyen`)) +
   geom_bar(stat="identity", position = "dodge2") +
   coord_flip() +
-  geom_text(size=3, position = position_dodge2(width = 0.9)) +
-  ggtitle("Prix moyen des appartements par nuit, par arrondissement et par type") +
-  labs(y="Prix moyen par nuit (en $)", x="Arrondissements")
+  geom_text(size=5, position = position_dodge2(width = 0.9)) +
+  ggtitle("Fig2: Prix moyen des appartements par nuit, par arrondissement et par type") +
+  labs(y="Prix moyen par nuit (en $)", x="Arrondissements") + 
+  theme(text = element_text(size = 20))
 
-ggsave(plot2, file="plots/prix_par_quartier_type.pdf", width = w, height = h)
+ggsave(plot2, file="plots/prix_par_quartier_type.pdf", width = w*1.5, height = h/2)
  
 
 #################################### PLOT 3 ####################################
@@ -103,17 +104,17 @@ for(cat in categories){
   
   # CrÃ©ation du radar chart
   name = paste("plots/radar_dispo_moyenne/radar_disp_moyenne_", cat, ".pdf", sep="")
-  pdf(name, width = 1.4*w, height = 1.4*h)
+  pdf(name, width = 1.2*w, height = h)
   radarchart(moyenne_dispo_quartier_transpose,
              axistype = 1,
              pcol=paste(colors[i], "AF", sep=""),
              pfcol=paste(colors[i], "AF", sep=""),
              plwd=3,
              axislabcol="#878787",
-             cglwd=1,
+             cglwd=0.5,
              vlcex=2.5,
-             calcex = 2.8,
-             title=paste("DisponibilitÃ©es Ã  ", cat, "", " (% de l'annÃ©e)", sep=""),
+             calcex = 3,
+             title=cat,
              cex.main = 3
              )
   dev.off()
@@ -134,6 +135,18 @@ midtown_Top20 <-
   arrange(price) %>%
   head(20)
 
+midtown_shared <-
+  midtown_Top20 %>%
+  filter(room_type == "Shared room")
+
+midtown_private <-
+  midtown_Top20 %>%
+  filter(room_type == "Private room")
+
+midtown_Entire <-
+  midtown_Top20 %>%
+  filter(room_type == "Entire home/apt")
+
 # Ajout image du Pin
 custom_pin = makeIcon(
   iconUrl = "icon/custom_pin.png",
@@ -152,7 +165,7 @@ map <- map %>%
                      icon = custom_pin,
                      labelOptions = labelOptions(noHide = T,
                                                  style = list(
-                                                   "color" = "red",
+                                                   "color" = "#1f1c2d",
                                                    "font-size" = "15px"
                                                  )),
   ) %>%
@@ -162,20 +175,41 @@ map <- map %>%
              icon = custom_pin,
              labelOptions = labelOptions(noHide = T,
                                          style = list(
-                                           "color" = "red",
+                                           "color" = "#1f1c2d",
                                            "font-size" = "15px"
                                          )),
   ) %>%
   # Ajout des markers (Latitude / longitude des logements)
-  addMarkers(lng = midtown_Top20$longitude, lat =  midtown_Top20$latitude,
-             label = paste(midtown_Top20$price, "$"),
+  ## Shared room
+  addMarkers(lng = midtown_shared$longitude, lat =  midtown_shared$latitude,
+             label = paste(midtown_shared$price, "$"),
              icon = custom_pin,
              labelOptions = labelOptions(noHide = T,
                                          style = list(
-                                           "color" = "green",
+                                           "color" = "#619cff",
                                            "font-size" = "12px"
                                          )),
-             )
+  ) %>%
+  ## Private room
+  addMarkers(lng = midtown_private$longitude, lat =  midtown_private$latitude,
+             label = paste(midtown_private$price, "$"),
+             icon = custom_pin,
+             labelOptions = labelOptions(noHide = T,
+                                         style = list(
+                                           "color" = "#00b528",
+                                           "font-size" = "12px"
+                                         )),
+  ) %>%
+  ## Logement entiers
+  addMarkers(lng = midtown_Entire$longitude, lat =  midtown_Entire$latitude,
+             label = paste(midtown_Entire$price, "$"),
+             icon = custom_pin,
+             labelOptions = labelOptions(noHide = T,
+                                         style = list(
+                                           "color" = "#f8766d",
+                                           "font-size" = "12px"
+                                         )),
+  )
 
 map %>% addTiles()
 
@@ -183,29 +217,38 @@ map %>% addTiles()
 
 #################################### PLOT 5 ####################################
 
+# df avec seulement les noms et ids, sans répétition
+id_names <-
+  df %>%
+  select(c("host_id", "host_name")) %>%
+  unique()
+
 # Top des 5 des hÃ´tes par arrondissement
-rank_hostnames <- 
+rank_hostids <- 
   df %>%
   group_by(neighbourhood_group) %>%
-  count(host_name) %>%
+  count(host_id) %>%
   rename(Nombre = n, Arrondissement = neighbourhood_group) %>%
   mutate(Rank = rank(-Nombre, ties.method = "random")) %>%
   subset(Rank <= 5) %>%
-  arrange(Arrondissement, -Nombre)
+  arrange(Arrondissement, -Nombre) %>%
+  inner_join(id_names, by = "host_id")
+  
 
 # Plot des 5 premiers host_names / arrondissement pour chaque arrondissement
 
 plot5 <-
-  rank_hostnames %>%
+  rank_hostids %>%
   ggplot(aes(x = reorder(host_name, -Rank), y=Nombre, fill=Arrondissement)) +
   geom_bar(stat="identity") +
   coord_flip() +
   facet_wrap("Arrondissement", scales = "free") +
   scale_fill_manual(values = arrond_colors) + 
-  labs(x="Nom d'hote (ou d'entreprise)", y="Occurence") + 
-  ggtitle("Top 5 des noms d'hÃ´te (ou entreprise) par arrondissement")
+  labs(x="Höte", y="Occurence") + 
+  ggtitle("Fig4: Top 5 des hôtes ayant le plus d'appartements par arrondissement") +
+  theme(text = element_text(size = 17))
   
-ggsave(plot5, file="plots/Top5_prenoms_par_arrond.pdf", width = w, height = h/3)
+ggsave(plot5, file="plots/Top5_prenoms_par_arrond.pdf", width = 1.5*w, height = h/2)
   
   
    
