@@ -18,6 +18,11 @@ df <- read.csv(file="AB_NYC_2019.csv", sep=",")
 names(which(colSums(is.na(df)) > 0))
 # Seul review_per_month a des NA
 
+arrond_colors = c("Bronx" = "#e2b420",
+  "Brooklyn" = "#cb7329",
+  "Manhattan" = "#728ea4",
+  "Queens" = "#9da339",
+  "Staten Island" = "#a9718a")
 
 #################################### PLOT 1 ####################################
 # Dans quels arrondissements trouve t-on le plus de AirBNB
@@ -28,13 +33,9 @@ appt_par_arrond <-
 
 # Affichage / Sauvegarde du Plot 1:
 plot1 <- appt_par_arrond %>%
-  ggplot(aes(x = Arrondissements, y=`Nombre d'appartements`, fill=Arrondissements)) + 
+  ggplot(aes(x = reorder(Arrondissements, `Nombre d'appartements`), y=`Nombre d'appartements`, fill=Arrondissements)) + 
   geom_bar(stat="identity") + 
-  scale_fill_manual(values = c("Bronx" = "#e2b420",
-                                   "Brooklyn" = "#cb7329",
-                                   "Manhattan" = "#728ea4",
-                                   "Queens" = "#9da339",
-                                   "Staten Island" = "#a9718a")) +
+  scale_fill_manual(values = arrond_colors) +
   ggtitle("Nombre de AirBnb par arrondissement")
 
 ggsave(plot1, file="plots/appart_par_quartier.pdf", width = w, height = h)
@@ -58,6 +59,7 @@ plot2 <- prix_par_arrond_type %>%
 
 ggsave(plot2, file="plots/prix_par_quartier_type.pdf", width = w, height = h)
  
+
 #################################### PLOT 3 ####################################
 # Quartiers les plus disponibles (top 6) par arrondissements
 
@@ -177,6 +179,34 @@ map %>% addTiles()
 
 # Pour sauvegarder la carte, on prend un screenshot (car c'est une view et non un plot, donc pas de sauvegarde en pdf possible nativement)
 
+#################################### PLOT 5 ####################################
+
+# Top des 5 des hôtes par arrondissement
+rank_hostnames <- 
+  df %>%
+  group_by(neighbourhood_group) %>%
+  count(host_name) %>%
+  rename(Nombre = n, Arrondissement = neighbourhood_group) %>%
+  mutate(Rank = rank(-Nombre, ties.method = "random")) %>%
+  subset(Rank <= 5) %>%
+  arrange(Arrondissement, -Nombre)
+
+# Plot des 5 premiers host_names / arrondissement pour chaque arrondissement
+
+plot5 <-
+  rank_hostnames %>%
+  ggplot(aes(x = reorder(host_name, -Rank), y=Nombre, fill=Arrondissement)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  facet_wrap("Arrondissement", scales = "free") +
+  scale_fill_manual(values = arrond_colors) + 
+  labs(x="Nom d'hote (ou d'entreprise)", y="Occurence") + 
+  ggtitle("Top 5 des noms d'hôte (ou entreprise) par arrondissement")
+  
+ggsave(plot5, file="plots/Top5_prenoms_par_arrond.pdf", width = w, height = h/3)
+  
+  
+   
 
 
 
