@@ -36,9 +36,11 @@ plot1 <- appt_par_arrond %>%
   ggplot(aes(x = reorder(Arrondissements, `Nombre d'appartements`), y=`Nombre d'appartements`, fill=Arrondissements)) + 
   geom_bar(stat="identity") + 
   scale_fill_manual(values = arrond_colors) +
-  ggtitle("Nombre de AirBnb par arrondissement")
+  ggtitle("Nombre de AirBnb par arrondissement") +
+  labs(x="Arrondissements") +
+  theme(text = element_text(size = 20))
 
-ggsave(plot1, file="plots/appart_par_quartier.pdf", width = w, height = h)
+ggsave(plot1, file="plots/appart_par_quartier.pdf", width = w, height = h/2)
 
 
 #################################### PLOT 2 ####################################
